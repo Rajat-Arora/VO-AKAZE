@@ -19,7 +19,12 @@ svo::svo(ros::NodeHandle& nodeHandle)
 }
 
 
-svo::
+svo::load_parameters(){
+
+	
+
+
+}
 
 
 
@@ -32,10 +37,10 @@ svo::create_ros_io(){
 	stereo_sub_.registerCallback(&svo::vo_callback,  this);
 	
 	//  publisher for VO 
-	vo_odom_pub = nh. advertise <nav_msgs::Odometry>( vo_odom_topic_ ,  10 ); 
+	vo_odom_pub_ = nh. advertise <nav_msgs::Odometry>( vo_odom_topic_ ,  10 ); 
 
 	//  publisher for path 
-	path_pub = nh. advertise <nav_msgs::Path>( path_topic_ ,  10 ); 
+	path_pub_ = nh. advertise <nav_msgs::Path>( path_topic_ ,  10 ); 
 	
 }
  
