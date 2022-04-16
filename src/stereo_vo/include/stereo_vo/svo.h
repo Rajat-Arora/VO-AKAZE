@@ -21,18 +21,42 @@ public:
 
 private:
 
+// Methods
+
 	bool load_parameters();
 
 	bool initialize();
 
 	void rectify();
 	
+    void initialize_first_frame();
+		
 	bool find_feature_matches();
 	
-		
+	void pose_estimation_3d2d();	
+	
+	void vo_callback(const std_msgs::String::ConstPtr& msg);  //Change message type	
 
+// Variables
 
+	//  Indicate if this is the first image message. 
+	bool  is_first_img; 
+	
+	//! ROS node handle.
+	ros::NodeHandle& nodeHandle_;
+  
+	//! ROS topic subscriber.
+	ros::Subscriber subscriber_;
 
-
+	//! ROS topic name to subscribe to.
+	std::string subscriber_topic_;
+  
+	//! ROS topic publisher.
+	ros::Publisher publisher_;
+	
+	//! ROS topic name to publish to.
+	std::string publisher_topic_;
+	
+	
 
 };
