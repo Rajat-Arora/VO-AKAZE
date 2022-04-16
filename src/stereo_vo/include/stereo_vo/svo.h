@@ -25,7 +25,7 @@ private:
 
 	bool load_parameters();
 
-	bool initialize();
+	bool create_ros_io();   //almost done
 
 	void rectify();
 	
@@ -35,28 +35,57 @@ private:
 	
 	void pose_estimation_3d2d();	
 	
-	void vo_callback(const std_msgs::String::ConstPtr& msg);  //Change message type	
+	void vo_callback(const  sensor_msgs::ImageConstPtr& cam0_img, const  sensor_msgs::ImageConstPtr& cam1_img);	
 
-// Variables
+
+//------------------- Variables -------------------------------
 
 	//  Indicate if this is the first image message. 
 	bool  is_first_img; 
 	
 	//! ROS node handle.
-	ros::NodeHandle& nodeHandle_;
+	ros::NodeHandle& node_handle_;
   
+	message_filters::Subscriber<sensor_msgs::Image> cam0_img_sub_; 
+	
+	message_filters::Subscriber<sensor_msgs::Image> cam1_img_sub_; 
+  
+	message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> stereo_sub_;
+
+    
 	//! ROS topic subscriber.
-	ros::Subscriber subscriber_;
+//	ros::Subscriber subscriber_;
 
 	//! ROS topic name to subscribe to.
-	std::string subscriber_topic_;
+	std::string cam0_topic_;
+
+	std::string cam1_topic_;
   
-	//! ROS topic publisher.
-	ros::Publisher publisher_;
 	
-	//! ROS topic name to publish to.
-	std::string publisher_topic_;
+	ros::Publisher vo_odom_pub_;
+  	ros::Publisher path_pub_;
 	
+    //! ROS topic name to publish to.
+	std::string vo_odom_topic_;
+
+	std::string path_topic_;
 	
+	//VO Variables
+	cv::Mat voR;
+	cv::Mat voT;
+  	cv::Mat pos_n;
+  	tf::Quaternion quat_rvec;
+
+  	//tf
+  	tf::TransformBroadcaster tf_pub_vo;
+
+  	//VO w.r.t world
+  	tf::Transform T_vo_w;
+
+  	//Display path
+  	nav_msgs::Path path_msg;
+  	geometry_msgs::PoseStamped poseStamped_msg;	
+
+
 
 };
