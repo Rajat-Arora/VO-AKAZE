@@ -27,11 +27,14 @@ private:
 
 	bool create_ros_io();   //almost done check for tf, vo 
 
-	void rectify();
+	void rectify(cv::Mat& imgL, cv::Mat& imgR); //complete
 	
-    void initialize_first_frame();
+    void initialize_first_frame(); // Almost complete
 		
-	bool find_feature_matches();
+	bool find_feature_matches(const  cv::Mat &img_1,  const  cv::Mat &img_2,        // Almost complete
+                          std::vector<KeyPoint> &kpL_matched,
+                          std::vector<KeyPoint> &kpR_matched,
+                          std::vector<DMatch> &descriptorL);
 	
 	void pose_estimation_3d2d();	
 	
@@ -77,6 +80,11 @@ private:
   	cv::Mat pos_n;
   	tf::Quaternion quat_rvec;
 
+	std::vector<KeyPoint> kpL_prev_;
+    std::vector<KeyPoint> kpR_prev_;
+    std::vector<DMatch> desL_prev_;
+
+
   	//tf
   	tf::TransformBroadcaster tf_pub_vo;
 
@@ -97,4 +105,7 @@ private:
 	cv_bridge::CvImageConstPtr cam0_prev_img_ptr_;
   	cv_bridge::CvImageConstPtr cam0_curr_img_ptr_;
   	cv_bridge::CvImageConstPtr cam1_curr_img_ptr_;
+
+	cv::Ptr<Feature2D> orb_ = ORB::create(1000);
+	cv::Ptr<DescriptorMatcher> matcher_ = DescriptorMatcher::create("BruteForce-Hamming");
 };
