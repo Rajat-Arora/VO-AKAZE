@@ -23,9 +23,9 @@ private:
 
 // Methods
 
-	bool load_parameters();
+	bool load_parameters(); // loaded all callibration parameters and topic names. Add topic names in config file
 
-	bool create_ros_io();   //almost done
+	bool create_ros_io();   //almost done check for tf, vo 
 
 	void rectify();
 	
@@ -37,6 +37,7 @@ private:
 	
 	void vo_callback(const  sensor_msgs::ImageConstPtr& cam0_img, const  sensor_msgs::ImageConstPtr& cam1_img);	
 
+	cv::Mat  getTransformCV ( const  ros::NodeHandle &nh, const  std::string &field)
 
 //------------------- Variables -------------------------------
 
@@ -86,6 +87,14 @@ private:
   	nav_msgs::Path path_msg;
   	geometry_msgs::PoseStamped poseStamped_msg;	
 
+	//VO Callibration variables to be loaded from Calibration file
 
+	cv::Mat K0_, K1_, P0_, P1_, p0_, p1_, R0_, R1_, D0_, D1_; 
 
+	
+	//Image Pointers
+	
+	cv_bridge::CvImageConstPtr cam0_prev_img_ptr_;
+  	cv_bridge::CvImageConstPtr cam0_curr_img_ptr_;
+  	cv_bridge::CvImageConstPtr cam1_curr_img_ptr_;
 };
