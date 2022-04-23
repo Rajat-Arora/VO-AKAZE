@@ -6,6 +6,8 @@
 svo::svo(ros::NodeHandle& nodeHandle)
 	: node_handle_(nodeHandle)
 {
+	is_first_img_ = true;
+
 	if (!load_parameters()) {
     	ROS_ERROR("Could not read parameters.");
     	ros::requestShutdown();
@@ -68,14 +70,32 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
 	cam0_curr_img_ptr = cv_bridge::toCvShare(cam0_img, sensor_msgs::image_encodings::MONO8);
   	cam1_curr_img_ptr = cv_bridge::toCvShare(cam1_img, sensor_msgs::image_encodings::MONO8);
 
-	if (is_first_img) {
+	if (is_first_img_) {
     	
 		initializeFirstFrame();
-    	is_first_img = false;
+    	is_first_img_ = false;
 	}
 	else{
-	
 		
+		const Mat& img_L = cam0_curr_img_ptr->image;
+		const Mat& img_R = cam1_curr_img_ptr->image;
+		
+		svo::rectify(img_L, img_R);
+
+		std::vector<KeyPoint> kpL_matched;
+    	std::vector<KeyPoint> kpR_matched;
+    	std::vector<DMatch> descriptorL;
+		std::vector<KeyPoint> kpL_next;
+ 	    std::vector<KeyPoint> kpR_next;
+	    std::vector<DMatch> desL_next;
+
+		svo::find_feature_matches(img_L, img_R, kpL_matched, kpR_matched, descriptorL);
+
+		kpL_next = kpL_matched;
+		kpR_next = kpR_matched;
+		desL_next = descriptorL;
+
+		svo::
 
 	}
 
@@ -134,6 +154,9 @@ void find_feature_matches(const  cv::Mat &img_1,  const  cv::Mat &img_2,
       	matches.push_back (match[i]); 
     	} 
   	}
+
+
+	cv::findFundamentalMat 	(points1, points2, method, ransacReprojThreshold, confidence, maxIters); 	
 	
 	 for(int i=0; i<matches.size();i++)
     {
@@ -170,6 +193,42 @@ void svo::initialize_first_frame(){
 }
 
 
+cv::Mat  svo::getVec16Transform ( const  ros::NodeHandle &nh, 
+                          const  std::string &field){
+	
+	std::vector<double> v;
+  	nh.getParam(field, v);
+  	if (v.size() != 16) {
+    	throw std::runtime_error("invalid vec16!");
+  	}
+  	cv::Mat T = cv::Mat(v).clone().reshape(1, 4); // one channel 4 rows
+  	return T;
+}
+
+cv::Mat svo::getKalibrStyleTransform(const ros::NodeHandle &nh,
+             	                   const std::string &field) {
+  cv::Mat T = cv::Mat::eye(4, 4, CV_64FC1);
+  XmlRpc::XmlRpcValue lines;
+  if (!nh.getParam(field, lines)) {
+    throw (std::runtime_error("cannot find transform " + field));
+  }
+  if (lines.size() != 4 || lines.getType() != XmlRpc::XmlRpcValue::TypeArray) {
+    throw (std::runtime_error("invalid transform " + field));
+  }
+  for (int i = 0; i < lines.size(); i++) {
+    if (lines.size() != 4 || lines.getType() != XmlRpc::XmlRpcValue::TypeArray) {
+      throw (std::runtime_error("bad line for transform " + field));
+    }
+    for (int j = 0; j < lines[i].size(); j++) {
+      if (lines[i][j].getType() != XmlRpc::XmlRpcValue::TypeDouble) {
+        throw (std::runtime_error("bad value for transform " + field));
+      } else {
+        T.at<double>(i,j) = static_cast<double>(lines[i][j]);
+      }
+    }
+  }
+  return T;
+}
 
 
 
@@ -179,7 +238,7 @@ cv::Mat  svo::getTransformCV ( const  ros::NodeHandle &nh,
 	cv::Mat T; 
   	try  { 
     //  first try reading kalibr format 
-  	T =  getKalibrStyleTransform (nh, field); 
+  	T =  getKalibrStyleTransform(nh, field); 
   	}  catch  (std::runtime_error &e) { 
    	//  maybe it's the old style format? 
     ROS_DEBUG_STREAM ( " cannot read transform  "  << field 
@@ -187,7 +246,7 @@ cv::Mat  svo::getTransformCV ( const  ros::NodeHandle &nh,
     try  { 
       T =  getVec16Transform (nh, field); 
     }  catch  (std::runtime_error &e) { 
-      std::string msg =  " cannot read transform  "  + field +  "  error:  "  + e. what (); 
+      std::string msg =  " cannot read transform  "  + field +  "  error:  "  + e.what(); 
       ROS_ERROR_STREAM (msg); 
       throw  std::runtime_error (msg); 
     } 
