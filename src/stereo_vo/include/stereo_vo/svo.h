@@ -82,7 +82,7 @@ private:
 
 	std::vector<KeyPoint> kpL_prev_;
     std::vector<KeyPoint> kpR_prev_;
-    std::vector<DMatch> desL_prev_;
+    cv::Mat desL_prev_;
 
 
   	//tf
