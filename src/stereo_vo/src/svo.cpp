@@ -84,23 +84,69 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
 
 		std::vector<KeyPoint> kpL_matched;
     	std::vector<KeyPoint> kpR_matched;
-    	std::vector<DMatch> descriptorL;
-		std::vector<KeyPoint> kpL_next;
- 	    std::vector<KeyPoint> kpR_next;
-	    std::vector<DMatch> desL_next;
+    	cv::Mat descriptorL;
+		std::vector<KeyPoint> kpL_next, kpL_prefinal, kpR_prefinal;
+ 	    std::vector<KeyPoint> kpR_next, kpL_next_prefinal;
+	    cv::Mat desL_next;
 
-		svo::find_feature_matches(img_L, img_R, kpL_matched, kpR_matched, descriptorL);
+		svo::find_feature_matches(img_L, img_R, kpL_matched, kpR_matched, descriptorL); //Find matches between previous frame.
 
 		kpL_next = kpL_matched;
 		kpR_next = kpR_matched;
 		desL_next = descriptorL;
 
-		svo::
+        //Find matches between previous and current frame.
+        std::vector<cv::Dmatch> matches_prefinal, matches_final;
+   		svo::matcher_->match (desL_prev_, desL_next, matches_prefinal, Mat()); 
+        
+        
+  		double  min_dist =  10000 , max_dist =  0 ; 
+
+  		// Find the minimum and maximum distances between all matches, that is, the distances between the most similar and least similar two sets of points 
+  		for  ( int  i =  0 ; i < matches_prefinal.rows ; i++) { 
+    		double  dist = matches_prefinal[i].distance ; 
+    		if  (dist < min_dist) min_dist = dist; 
+    		if  (dist > max_dist) max_dist = dist; 
+  		} 
+
+
+ 	 // When the distance between descriptors is greater than twice the minimum distance, the matching is considered incorrect. But sometimes the minimum distance is very small, and an empirical value of 30 is set as the lower limit. 
+  	for  ( int  i= 0 ; i< matches_prefinal.rows ; i++) { 
+    	if  (matches_prefinal[i].distance  <=  max ( 2  * min_dist,  30.0 )) { 
+      		matches_final.push_back (match[i]); 
+    	} 
+  	}
+
+	 for(int i=0; i<matches_final.size();i++)
+    {
+     kpL_prefinal.push_back(kpts1[matches[i].queryIdx].pt);
+     kpR_prefinal.push_back(kpts2[matches[i].trainIdx].pt);
+    }
+
+	return;
+ 
+}
+
+
+
+
+
+
+		svo::filter_matches(kpL_prev_, kpR_prev_, )
 
 	}
 
 
 }
+
+void svo::filter_matches(){
+	
+	
+
+
+
+}
+
 
 void svo::rectify(cv::Mat& imgL, cv::Mat& imgR){
 
@@ -155,9 +201,6 @@ void find_feature_matches(const  cv::Mat &img_1,  const  cv::Mat &img_2,
     	} 
   	}
 
-
-	cv::findFundamentalMat 	(points1, points2, method, ransacReprojThreshold, confidence, maxIters); 	
-	
 	 for(int i=0; i<matches.size();i++)
     {
      kpL_matched.push_back(kpts1[matches[i].queryIdx].pt);
