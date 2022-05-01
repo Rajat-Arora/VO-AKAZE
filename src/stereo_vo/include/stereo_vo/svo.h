@@ -1,15 +1,17 @@
 #pragma once
 
 #include <ros/ros.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <sensor_msgs/Image.h>
+#include <cv_bridge/cv_bridge.h>
+#include <tf/transform_broadcaster.h>
+#include <nav_msgs/Odometry.h> 
+#include <nav_msgs/Path.h> 
+#include <geometry_msgs/PoseStamped.h> 
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <opencv2/video.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/calib3d.hpp>
-#include <opencv2/features2d.hpp>
 
 
 
@@ -27,21 +29,24 @@ private:
 
 	bool create_ros_io();   //almost done check for tf, vo 
 
-	void rectify(cv::Mat& imgL, cv::Mat& imgR); //complete
+	void rectify(cv::Mat imgL, cv::Mat imgR); //complete
 	
     void initialize_first_frame(); // Almost complete
 		
-	bool find_feature_matches(const  cv::Mat &img_1,  const  cv::Mat &img_2,        // Almost complete
-                          std::vector<KeyPoint> &kpL_matched,
-                          std::vector<KeyPoint> &kpR_matched,
-                          std::vector<DMatch> &descriptorL);
+	void find_feature_matches(const  cv::Mat& img_1,  const  cv::Mat& img_2,        // Almost complete
+                          std::vector<cv::KeyPoint>& kpL_matched,
+                          std::vector<cv::KeyPoint>& kpR_matched,
+                          cv::Mat& descriptorL);
 	
-	void pose_estimation_3d2d();	
+//	void pose_estimation_3d2d();	
 	
-	void vo_callback(const  sensor_msgs::ImageConstPtr& cam0_img, const  sensor_msgs::ImageConstPtr& cam1_img);	
+	void vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_msgs::ImageConstPtr& cam1_img);	
 
-	cv::Mat  getTransformCV ( const  ros::NodeHandle &nh, const  std::string &field)
+	cv::Mat  getTransformCV ( const  ros::NodeHandle &nh, const  std::string &field);
 
+    cv::Mat getKalibrStyleTransform(const ros::NodeHandle &nh, const std::string &field);
+
+    cv::Mat  getVec16Transform ( const  ros::NodeHandle &nh, const  std::string &field);
 //------------------- Variables -------------------------------
 
 	//  Indicate if this is the first image message. 
@@ -80,8 +85,8 @@ private:
   	cv::Mat pos_n;
   	tf::Quaternion quat_rvec;
 
-	std::vector<KeyPoint> kpL_prev_;
-    std::vector<KeyPoint> kpR_prev_;
+	std::vector<cv::KeyPoint> kpL_prev_;
+    std::vector<cv::KeyPoint> kpR_prev_;
     cv::Mat desL_prev_;
 
 
@@ -106,6 +111,6 @@ private:
   	cv_bridge::CvImageConstPtr cam0_curr_img_ptr_;
   	cv_bridge::CvImageConstPtr cam1_curr_img_ptr_;
 
-	cv::Ptr<Feature2D> orb_ = ORB::create(1000);
-	cv::Ptr<DescriptorMatcher> matcher_ = DescriptorMatcher::create("BruteForce-Hamming");
+	cv::Ptr<cv::Feature2D> orb_ = cv::ORB::create(1000);
+	cv::Ptr<cv::DescriptorMatcher> matcher_ = cv::DescriptorMatcher::create("BruteForce-Hamming");
 };
