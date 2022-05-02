@@ -1,9 +1,10 @@
 #pragma once
 
 #include <ros/ros.h>
+#include <sensor_msgs/Image.h>
+#include <message_filters/time_synchronizer.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
-#include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
 #include <tf/transform_broadcaster.h>
 #include <nav_msgs/Odometry.h> 
@@ -19,7 +20,7 @@
 class svo{
 
 public:
-	svo(ros::NodeHandle& nodeHandle);
+	svo(ros::NodeHandle& nd);
 
 private:
 
@@ -34,8 +35,8 @@ private:
     void initialize_first_frame(); // Almost complete
 		
 	void find_feature_matches(const  cv::Mat& img_1,  const  cv::Mat& img_2,        // Almost complete
-                          std::vector<cv::KeyPoint>& kpL_matched,
-                          std::vector<cv::KeyPoint>& kpR_matched,
+                          std::vector<cv::Point2f>& kpL_matched,
+                          std::vector<cv::Point2f>& kpR_matched,
                           cv::Mat& descriptorL);
 	
 //	void pose_estimation_3d2d();	
@@ -85,8 +86,8 @@ private:
   	cv::Mat pos_n;
   	tf::Quaternion quat_rvec;
 
-	std::vector<cv::KeyPoint> kpL_prev_;
-    std::vector<cv::KeyPoint> kpR_prev_;
+	std::vector<cv::Point2f> kpL_prev_;
+    std::vector<cv::Point2f> kpR_prev_;
     cv::Mat desL_prev_;
 
 
