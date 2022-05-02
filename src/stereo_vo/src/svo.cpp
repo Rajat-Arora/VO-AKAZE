@@ -131,12 +131,15 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
   	svo::cam1_curr_img_ptr_ = cv_bridge::toCvShare(cam1_img, sensor_msgs::image_encodings::MONO8);
 
 	if (svo::is_first_img) {
-    	
+      //  ROS_INFO("Check1");	
 		svo::initialize_first_frame();
     	svo::is_first_img = false;
+      //  ROS_INFO("%ld", kpL_prev_.size());
+      //  ROS_INFO("%ld", kpR_prev_.size());
+      //  ROS_INFO("%d", desL_prev_.size());
 	}
 	else{
-		
+	//	ROS_INFO("Check2");
 		cv::Mat img_L = cam0_curr_img_ptr_->image;
 		cv::Mat img_R = cam1_curr_img_ptr_->image;
 		
@@ -154,11 +157,16 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
 		kpL_next = kpL_matched;
 		kpR_next = kpR_matched;
 		desL_next = descriptorL;
-
+        
+      //  ROS_INFO("%ld", kpL_next.size());
+      //  ROS_INFO("%ld", kpR_next.size());
         //Find matches between previous and current frame.
         std::vector<cv::DMatch> matches_prefinal, matches_final;
    		svo::matcher_->match(desL_prev_, desL_next, matches_prefinal, cv::Mat()); 
         
+	//	ROS_INFO("Check2");
+      //  ROS_INFO("%ld", kpL_next.size());
+      //  ROS_INFO("%ld", kpR_next.size());
         
   		double  min_dist =  10000 , max_dist =  0 ; 
 
@@ -191,18 +199,25 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
     kpR_prev_ =  kpR_next;
     desL_prev_ = desL_next;
 
-
+    //ROS_INFO("%ld",kpL_prev_prefinal.size());
+    //ROS_INFO("%ld",kpR_prev_prefinal.size());
+  //  ROS_INFO("%ld",kpR_next_prefinal.size());
+    
+	//ROS_INFO("Check3");
     cv::Mat A,A1,rvec,tvec,_R,k1,k2,k3,pos;
     cv::triangulatePoints(P0_,P1_,kpL_prev_prefinal,kpR_prev_prefinal,A);
     cv::convertPointsFromHomogeneous(A.t(),A1);
-
     cv::decomposeProjectionMatrix(P0_,k1,k2,k3);
-    cv::solvePnPRansac(A1,kpL_next_prefinal,k1,cv::noArray(),rvec,tvec,false,145,1.0,0.99,cv::noArray(),cv::SOLVEPNP_ITERATIVE);
- 
-    Rodrigues(rvec,_R);
-    voR = _R * voR;
-    voT = _R * voT + tvec;
-    pos_n = -voR.t() * voT; //translation of current w.r.t initial
+    ROS_INFO("%d",A1.rows);
+    ROS_INFO("%d",A1.cols);
+
+    cv::solvePnPRansac(A1,kpL_next_prefinal,k1,cv::noArray(),rvec,tvec,false,145,0.70,0.90,cv::noArray(),cv::SOLVEPNP_ITERATIVE);
+    
+//	ROS_INFO_STREAM(rvec);
+  //  Rodrigues(rvec,_R);
+  //  voR = _R * voR;
+  //  voT = _R * voT + tvec;
+  //  pos_n = -voR.t() * voT; //translation of current w.r.t initial
 
 
   //  cv::Mat rot; // rvec_initial_frame;
