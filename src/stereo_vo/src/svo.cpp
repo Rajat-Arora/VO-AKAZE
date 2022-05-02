@@ -1,26 +1,86 @@
 #include  <ros/ros.h> 
 #include "stereo_vo/svo.h"
-
-
+#include <sensor_msgs/image_encodings.h>
 
 bool svo::load_parameters(){
 
-	K0_ =  svo::getTransformCV(node_handle_, "K0");	
-	K1_ =  svo::getTransformCV(node_handle_, "K1");	
-	P0_ =  svo::getTransformCV(node_handle_, "P0");	
-	P1_ =  svo::getTransformCV(node_handle_, "P1");	
-	p0_ =  svo::getTransformCV(node_handle_, "p0");	
-	p1_ =  svo::getTransformCV(node_handle_, "p1");	
-	R0_ =  svo::getTransformCV(node_handle_, "R0");	
-	R1_ =  svo::getTransformCV(node_handle_, "R1");	
-	D0_ =  svo::getTransformCV(node_handle_, "D0");	
-	D1_ =  svo::getTransformCV(node_handle_, "D1");
+ 
+	std::vector<double> K0_temp(9);
+    node_handle_.getParam("K0", K0_temp);
+	K0_ = (cv::Mat_<double>(3, 3) << 
+      K0_temp[0], K0_temp[1], K0_temp[2], 
+      K0_temp[3], K0_temp[4], K0_temp[5], 
+      K0_temp[6], K0_temp[7], K0_temp[8]);
+
+	std::vector<double> K1_temp(9);
+    node_handle_.getParam("K1", K1_temp);
+	K1_ = (cv::Mat_<double>(3, 3) << 
+      K1_temp[0], K1_temp[1], K1_temp[2], 
+      K1_temp[3], K1_temp[4], K1_temp[5], 
+      K1_temp[6], K1_temp[7], K1_temp[8]);
+
+	std::vector<double> P0_temp(12);
+    node_handle_.getParam("P0", P0_temp);
+	P0_ = (cv::Mat_<double>(3, 4) << 
+      P0_temp[0], P0_temp[1], P0_temp[2], P0_temp[3],
+	  P0_temp[4], P0_temp[5], P0_temp[6], P0_temp[7], 
+      P0_temp[8], P0_temp[9], P0_temp[10], P0_temp[11]);
+    
+	std::vector<double> P1_temp(12);
+    node_handle_.getParam("P1", P1_temp);
+	P1_ = (cv::Mat_<double>(3, 4) << 
+      P1_temp[0], P1_temp[1], P1_temp[2], P1_temp[3],
+	  P1_temp[4], P1_temp[5], P1_temp[6], P1_temp[7], 
+      P1_temp[8], P1_temp[9], P1_temp[10], P1_temp[11]);
+
+	std::vector<double> p0_temp(9);
+    node_handle_.getParam("p0", p0_temp);
+	p0_ = (cv::Mat_<double>(3, 3) << 
+      p0_temp[0], p0_temp[1], p0_temp[2], 
+      p0_temp[3], p0_temp[4], p0_temp[5], 
+      p0_temp[6], p0_temp[7], p0_temp[8]);
+
+   std::vector<double> p1_temp(9);
+    node_handle_.getParam("p1", p1_temp);
+	p1_ = (cv::Mat_<double>(3, 3) << 
+      p1_temp[0], p1_temp[1], p1_temp[2], 
+      p1_temp[3], p1_temp[4], p1_temp[5], 
+      p1_temp[6], p1_temp[7], p1_temp[8]);
+
+	std::vector<double> R0_temp(9);
+    node_handle_.getParam("R0", R0_temp);
+	R0_ = (cv::Mat_<double>(3, 3) << 
+      R0_temp[0], R0_temp[1], R0_temp[2], 
+      R0_temp[3], R0_temp[4], R0_temp[5], 
+      R0_temp[6], R0_temp[7], R0_temp[8]);
+
+	std::vector<double> R1_temp(9);
+    node_handle_.getParam("R1", R1_temp);
+	R1_ = (cv::Mat_<double>(3, 3) << 
+      R1_temp[0], R1_temp[1], R1_temp[2], 
+      R1_temp[3], R1_temp[4], R1_temp[5], 
+      R1_temp[6], R1_temp[7], R1_temp[8]);
+
+	std::vector<double> D0_temp(5);
+    node_handle_.getParam("D0", D0_temp);
+	D0_ = (cv::Mat_<double>(1, 5) << 
+      D0_temp[0], D0_temp[1], D0_temp[2], D0_temp[3], D0_temp[4]);
+
+	std::vector<double> D1_temp(5);
+    node_handle_.getParam("D1", D1_temp);
+	D1_ = (cv::Mat_<double>(1, 5) << 
+      D1_temp[0], D1_temp[1], D1_temp[2], D1_temp[3], D1_temp[4]);
 
 	node_handle_.getParam("cam0_topic", cam0_topic_);
 	node_handle_.getParam("cam1_topic", cam1_topic_);
 	node_handle_.getParam("vo_odom_topic", vo_odom_topic_);
 	node_handle_.getParam("path_topic", path_topic_);
 		
+    ROS_INFO("cam0_topic: %s", cam0_topic_.c_str());
+    ROS_INFO("cam1_topic: %s", cam1_topic_.c_str());
+    ROS_INFO("vo_odom_topic: %s", vo_odom_topic_.c_str());
+    ROS_INFO("path_topic: %s", path_topic_.c_str());
+    
 return true;
 
 }
@@ -45,8 +105,9 @@ return true;
 }
 
 
-svo::svo(ros::NodeHandle& nodeHandle)
-	: node_handle_(nodeHandle)
+svo::svo(ros::NodeHandle& nd) : 
+	node_handle_(nd),
+    stereo_sub_(10)
 {
 	svo::is_first_img = true;
 
@@ -59,7 +120,7 @@ svo::svo(ros::NodeHandle& nodeHandle)
 		ROS_ERROR("Could not create ROS IO.");
         ros::requestShutdown();
 	}
-  
+  return; 
 }
 
 
@@ -81,11 +142,11 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
 		
 		svo::rectify(img_L, img_R);
 
-		std::vector<cv::KeyPoint> kpL_matched;
-    	std::vector<cv::KeyPoint> kpR_matched;
+		std::vector<cv::Point2f> kpL_matched;
+    	std::vector<cv::Point2f> kpR_matched;
     	cv::Mat descriptorL;
-		std::vector<cv::KeyPoint> kpL_next;
- 	    std::vector<cv::KeyPoint> kpR_next;
+		std::vector<cv::Point2f> kpL_next;
+ 	    std::vector<cv::Point2f> kpR_next;
 	    cv::Mat desL_next;
 
 		svo::find_feature_matches(img_L, img_R, kpL_matched, kpR_matched, descriptorL); //Find matches between previous frame.
@@ -96,7 +157,7 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
 
         //Find matches between previous and current frame.
         std::vector<cv::DMatch> matches_prefinal, matches_final;
-   		svo::matcher_->match (desL_prev_, desL_next, matches_prefinal, cv::Mat()); 
+   		svo::matcher_->match(desL_prev_, desL_next, matches_prefinal, cv::Mat()); 
         
         
   		double  min_dist =  10000 , max_dist =  0 ; 
@@ -120,9 +181,9 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
 
 	 for(int i=0; i<matches_final.size();i++)
     {
-     kpL_prev_prefinal.push_back(kpL_prev_[matches_final[i].queryIdx].pt);
-     kpR_prev_prefinal.push_back(kpR_prev_[matches_final[i].queryIdx].pt);
-     kpL_next_prefinal.push_back(kpL_next[matches_final[i].queryIdx].pt);
+     kpL_prev_prefinal.push_back(kpL_prev_[matches_final[i].queryIdx]);
+     kpR_prev_prefinal.push_back(kpR_prev_[matches_final[i].queryIdx]);
+     kpL_next_prefinal.push_back(kpL_next[matches_final[i].queryIdx]);
     }
 
     // Set previous to current frame for next iteration
@@ -183,8 +244,8 @@ void svo::rectify(cv::Mat imgL, cv::Mat imgR){
 
 
 void svo::find_feature_matches(const cv::Mat& img_1, const cv::Mat& img_2, 
-                          std::vector<cv::KeyPoint>& kpL_matched, 
-                          std::vector<cv::KeyPoint>& kpR_matched, 
+                          std::vector<cv::Point2f>& kpL_matched, 
+                          std::vector<cv::Point2f>& kpR_matched, 
                           cv::Mat& descriptorL){
 
 	std::vector<cv::KeyPoint> keypoints_1, keypoints_2;
@@ -238,8 +299,8 @@ void svo::initialize_first_frame(){
 	  
 	svo::rectify(img_L, img_R);
 
-	std::vector<cv::KeyPoint> kpL_matched;
-    std::vector<cv::KeyPoint> kpR_matched;
+	std::vector<cv::Point2f> kpL_matched;
+    std::vector<cv::Point2f> kpR_matched; 
     cv::Mat descriptorL;
 
 	svo::find_feature_matches(img_L, img_R, kpL_matched, kpR_matched, descriptorL);
