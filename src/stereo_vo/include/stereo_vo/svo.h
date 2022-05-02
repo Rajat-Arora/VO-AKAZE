@@ -112,6 +112,6 @@ private:
   	cv_bridge::CvImageConstPtr cam0_curr_img_ptr_;
   	cv_bridge::CvImageConstPtr cam1_curr_img_ptr_;
 
-	cv::Ptr<cv::Feature2D> orb_ = cv::ORB::create(1000);
+	cv::Ptr<cv::Feature2D> orb_ = cv::AKAZE::create();
 	cv::Ptr<cv::DescriptorMatcher> matcher_ = cv::DescriptorMatcher::create("BruteForce-Hamming");
 };
