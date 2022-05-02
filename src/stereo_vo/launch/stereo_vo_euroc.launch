@@ -1,0 +1,7 @@
+<launch>
+
+<node pkg="stereo_vo" type="stereo_vo_node" name="stereo_vo" output="screen">
+    <rosparam command="load" file="$(dirname)/../config/euroc_config.yaml" />
+</node>
+
+</launch>
