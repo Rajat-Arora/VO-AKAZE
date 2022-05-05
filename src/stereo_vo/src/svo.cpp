@@ -1,7 +1,6 @@
 #include  <ros/ros.h> 
 #include "stereo_vo/svo.h"
 #include <sensor_msgs/image_encodings.h>
-
 bool svo::load_parameters(){
 
  
@@ -94,11 +93,11 @@ bool svo::create_ros_io(){
 	stereo_sub_.registerCallback(&svo::vo_callback,  this);
 	
 	//  publisher for VO 
-	vo_odom_pub_ = node_handle_. advertise <nav_msgs::Odometry>( vo_odom_topic_ ,  10 ); 
+	vo_odom_pub_ = node_handle_.advertise<nav_msgs::Odometry>(vo_odom_topic_ ,  10); 
 
 
 	//  publisher for path 
-	path_pub_ = node_handle_. advertise <nav_msgs::Path>( path_topic_ ,  10 ); 
+	path_pub_ = node_handle_.advertise<nav_msgs::Path>(path_topic_ , 10); 
 
 return true;
 	
@@ -107,7 +106,11 @@ return true;
 
 svo::svo(ros::NodeHandle& nd) : 
 	node_handle_(nd),
-    stereo_sub_(10)
+    stereo_sub_(10),
+	voR(cv::Mat::eye(3, 3, CV_64F)),
+	rot(cv::Mat::eye(3, 3, CV_64F)),
+    voT(cv::Mat::zeros(3, 1, CV_64F)),
+    pos_n(cv::Mat::zeros(3, 1, CV_64F))
 {
 	svo::is_first_img = true;
 
@@ -204,7 +207,7 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
   //  ROS_INFO("%ld",kpR_next_prefinal.size());
     
 	//ROS_INFO("Check3");
-    cv::Mat A,A1,rvec,tvec,_R,k1,k2,k3,pos;
+    cv::Mat A,A1,rvec,tvec,_R,k1,k2,k3;
     cv::triangulatePoints(P0_,P1_,kpL_prev_prefinal,kpR_prev_prefinal,A);
     cv::convertPointsFromHomogeneous(A.t(),A1);
     cv::decomposeProjectionMatrix(P0_,k1,k2,k3);
@@ -214,10 +217,11 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
     cv::solvePnPRansac(A1,kpL_next_prefinal,k1,cv::noArray(),rvec,tvec,false,145,0.70,0.90,cv::noArray(),cv::SOLVEPNP_ITERATIVE);
     
 //	ROS_INFO_STREAM(rvec);
-  //  Rodrigues(rvec,_R);
-  //  voR = _R * voR;
-  //  voT = _R * voT + tvec;
-  //  pos_n = -voR.t() * voT; //translation of current w.r.t initial
+    cv::Rodrigues(rvec,_R);
+    voR = _R * voR;
+    voT = _R * voT + tvec;
+    rot = voR.t();
+	pos_n = -voR.t() * voT; //translation of current w.r.t initial
 
 
   //  cv::Mat rot; // rvec_initial_frame;
@@ -235,8 +239,41 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
 
 
 }
-
+	svo::publish();
 	return;
+}
+
+
+void svo::publish(){
+
+  // Publishing VO Odometery
+  nav_msgs::Odometry vo_odom_msg;
+  vo_odom_msg.header.stamp = cam0_curr_img_ptr_->header.stamp; 
+  vo_odom_msg.header.frame_id = "world";
+  vo_odom_msg.child_frame_id = "vo";
+
+  // Add data
+  Eigen::Matrix3f rot_eigen; 
+  cv2eigen(rot,rot_eigen);
+  Eigen::Vector3f rvec_initial_frame = rot_eigen.eulerAngles(2,1,0);
+  tf::Quaternion quat_rot;
+  quat_rot.setRPY(rvec_initial_frame[0],rvec_initial_frame[1],rvec_initial_frame[2]);
+  quat_rot.normalize();
+  
+  T_vo_w.setRotation(quat_rot);
+  T_vo_w.setOrigin(tf::Vector3(pos_n.at<double>(0,0),pos_n.at<double>(1,0),pos_n.at<double>(2,0)));
+
+  vo_odom_msg.pose.pose.position.x = pos_n.at<double>(0,0);
+  vo_odom_msg.pose.pose.position.y = pos_n.at<double>(1,0);
+  vo_odom_msg.pose.pose.position.z = pos_n.at<double>(2,0);
+  vo_odom_msg.pose.pose.orientation.x = quat_rot.x();
+  vo_odom_msg.pose.pose.orientation.y = quat_rot.y();
+  vo_odom_msg.pose.pose.orientation.z = quat_rot.z();
+  vo_odom_msg.pose.pose.orientation.w = quat_rot.w();
+  vo_odom_pub_.publish(vo_odom_msg);
+
+  tf_pub_vo.sendTransform(tf::StampedTransform(T_vo_w, cam0_curr_img_ptr_->header.stamp, "world", "vo"));
+
 }
 
 
