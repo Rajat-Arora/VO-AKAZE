@@ -13,8 +13,9 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <opencv2/video.hpp>
-
-
+#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <opencv2/core/eigen.hpp>
 
 
 class svo{
@@ -43,6 +44,8 @@ private:
 	
 	void vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_msgs::ImageConstPtr& cam1_img);	
 
+	void publish();
+	
 	cv::Mat  getTransformCV ( const  ros::NodeHandle &nh, const  std::string &field);
 
     cv::Mat getKalibrStyleTransform(const ros::NodeHandle &nh, const std::string &field);
@@ -79,23 +82,24 @@ private:
 	std::string vo_odom_topic_;
 
 	std::string path_topic_;
+
+    //For Loosely Coupled tf
+  	tf::TransformBroadcaster tf_pub_vo;
+
+  	//VO w.r.t world
+  	tf::Transform T_vo_w;	
 	
 	//VO Variables
-	cv::Mat voR;
-	cv::Mat voT;
-  	cv::Mat pos_n;
-  	tf::Quaternion quat_rvec;
+	cv::Mat voR, rot;
+	cv::Mat voT, pos_n;
+  //	cv::Mat pos_n;
+ // 	tf::Quaternion quat_rvec;
 
 	std::vector<cv::Point2f> kpL_prev_;
     std::vector<cv::Point2f> kpR_prev_;
     cv::Mat desL_prev_;
 
 
-  	//tf
-  	tf::TransformBroadcaster tf_pub_vo;
-
-  	//VO w.r.t world
-  	tf::Transform T_vo_w;
 
   	//Display path
   	nav_msgs::Path path_msg;
