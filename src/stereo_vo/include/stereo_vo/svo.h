@@ -16,7 +16,8 @@
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include <opencv2/core/eigen.hpp>
-
+#include <iostream>
+#include <fstream>
 
 class svo{
 
@@ -31,7 +32,7 @@ private:
 
 	bool create_ros_io();   //almost done check for tf, vo 
 
-	void rectify(cv::Mat imgL, cv::Mat imgR); //complete
+	void rectify(cv::Mat& imgL, cv::Mat& imgR); //complete
 	
     void initialize_first_frame(); // Almost complete
 		
@@ -118,4 +119,6 @@ private:
 
 	cv::Ptr<cv::Feature2D> orb_ = cv::AKAZE::create();
 	cv::Ptr<cv::DescriptorMatcher> matcher_ = cv::DescriptorMatcher::create("BruteForce-Hamming");
+
+	std::ofstream myfile;
 };
