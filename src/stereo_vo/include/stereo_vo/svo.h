@@ -32,7 +32,7 @@ private:
 
 	bool create_ros_io();   //almost done check for tf, vo 
 
-	void rectify(cv::Mat& imgL, cv::Mat& imgR); //complete
+	void rectify(cv::Mat imgL, cv::Mat imgR, cv::Mat& imgL_rect, cv::Mat& imgR_rect); //complete
 	
     void initialize_first_frame(); // Almost complete
 		
