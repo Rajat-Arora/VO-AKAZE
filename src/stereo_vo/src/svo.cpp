@@ -148,8 +148,8 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
 	//	ROS_INFO("Check2");
 		cv::Mat img_L = cam0_curr_img_ptr_->image;
 		cv::Mat img_R = cam1_curr_img_ptr_->image;
-		
-		svo::rectify(img_L, img_R);
+		cv::Mat imgL_rect, imgR_rect;
+		svo::rectify(img_L, img_R, imgL_rect, imgR_rect);
 
 		std::vector<cv::Point2f> kpL_matched;
     	std::vector<cv::Point2f> kpR_matched;
@@ -158,7 +158,7 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
  	    std::vector<cv::Point2f> kpR_next;
 	    cv::Mat desL_next;
 
-		svo::find_feature_matches(img_L, img_R, kpL_matched, kpR_matched, descriptorL); //Find matches between previous frame.
+		svo::find_feature_matches(imgL_rect, imgR_rect, kpL_matched, kpR_matched, descriptorL); //Find matches between previous frame.
 
 		kpL_next = kpL_matched;
 		kpR_next = kpR_matched;
@@ -189,7 +189,7 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
 
  	 // When the distance between descriptors is greater than twice the minimum distance, the matching is considered incorrect. But sometimes the minimum distance is very small, and an empirical value of 30 is set as the lower limit. 
   	for  ( int  i= 0 ; i< matches_prefinal.size() ; i++) { 
-    	if  (matches_prefinal[i].distance  <=  std::max(2.5*min_dist, 35.0)) { 
+    	if  (matches_prefinal[i].distance  <=  std::max(2.0*min_dist, 30.0)) { 
       		matches_final.push_back (matches_prefinal[i]); 
     	} 
   	}
@@ -220,7 +220,7 @@ void svo::vo_callback(const sensor_msgs::ImageConstPtr& cam0_img, const sensor_m
   //  ROS_INFO("%d",A1.rows);
    // ROS_INFO("%d",A1.cols);
 
-    cv::solvePnPRansac(A1,kpL_next_prefinal,k1,cv::noArray(),rvec,tvec,false,145,0.75,0.90,cv::noArray(),cv::SOLVEPNP_ITERATIVE);
+    cv::solvePnPRansac(A1,kpL_next_prefinal,k1,cv::noArray(),rvec,tvec,false,145,1,0.99,cv::noArray(),cv::SOLVEPNP_ITERATIVE);
     
 //	ROS_INFO_STREAM(rvec);
     cv::Rodrigues(rvec,_R);
@@ -267,7 +267,7 @@ void svo::publish(){
   quat_rot.normalize();
   
   T_vo_w.setRotation(quat_rot);
-  T_vo_w.setOrigin(tf::Vector3(pos_n.at<double>(1,0),pos_n.at<double>(1,0),pos_n.at<double>(2,0)));
+  T_vo_w.setOrigin(tf::Vector3(pos_n.at<double>(0,0),pos_n.at<double>(1,0),pos_n.at<double>(2,0)));
 
   vo_odom_msg.pose.pose.position.x = pos_n.at<double>(0,0);
   vo_odom_msg.pose.pose.position.y = pos_n.at<double>(1,0);
@@ -295,7 +295,7 @@ void svo::publish(){
 }
 
 
-void svo::rectify(cv::Mat& imgL, cv::Mat& imgR){
+void svo::rectify(cv::Mat imgL, cv::Mat imgR, cv::Mat& imgL_rect, cv::Mat& imgR_rect){
 
 	cv::Mat M1L, M2L, M1R, M2R;
 	cv::initUndistortRectifyMap(K0_, D0_, R0_, p0_, cv::Size2d(752,480), CV_32FC1, M1L, M2L);
@@ -306,8 +306,8 @@ void svo::rectify(cv::Mat& imgL, cv::Mat& imgR){
 	cv::remap(imgL, rectified_imgL, M1L, M2L, cv::INTER_LINEAR);
 	cv::remap(imgR, rectified_imgR, M1R, M2R, cv::INTER_LINEAR);
 
-	imgL = rectified_imgL;
-	imgR = rectified_imgR;
+	imgL_rect = rectified_imgL;
+	imgR_rect = rectified_imgR;
 
 	return;
 }
@@ -343,7 +343,7 @@ void svo::find_feature_matches(const cv::Mat& img_1, const cv::Mat& img_2,
 
  	 // When the distance between descriptors is greater than twice the minimum distance, the matching is considered incorrect. But sometimes the minimum distance is very small, and an empirical value of 30 is set as the lower limit. 
   	for  ( int  i= 0 ; i< descriptors_1.rows ; i++) { 
-    	if  (match[i].distance  <=  std::max(2.5*min_dist, 35.0)) { 
+    	if  (match[i].distance  <=  std::max(2.0*min_dist, 30.0)) { 
       	matches.push_back (match[i]); 
     	} 
   	}
@@ -364,14 +364,14 @@ void svo::initialize_first_frame(){
 
 	 cv::Mat img_L = cam0_curr_img_ptr_->image;
 	 cv::Mat img_R = cam1_curr_img_ptr_->image;
-	  
-	svo::rectify(img_L, img_R);
+	 cv::Mat imgR_rect, imgL_rect; 
+	svo::rectify(img_L, img_R, imgL_rect, imgR_rect);
 
 	std::vector<cv::Point2f> kpL_matched;
     std::vector<cv::Point2f> kpR_matched; 
     cv::Mat descriptorL;
 
-	svo::find_feature_matches(img_L, img_R, kpL_matched, kpR_matched, descriptorL);
+	svo::find_feature_matches(imgL_rect, imgR_rect, kpL_matched, kpR_matched, descriptorL);
 
 	kpL_prev_ = kpL_matched;
 	kpR_prev_ = kpR_matched;
